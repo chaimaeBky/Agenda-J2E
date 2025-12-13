@@ -29,8 +29,8 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     @Query("SELECT COUNT(t) FROM Task t WHERE t.user = :user AND t.date = :date")
     long countByUserAndDate(@Param("user") User user, @Param("date") LocalDate date);
 
-    @Query("SELECT COUNT(t) FROM Task t WHERE t.user = :user AND t.date < :date AND t.statut NOT IN (:status)")
+    @Query("SELECT COUNT(t) FROM Task t WHERE t.user = :user AND t.date < :date AND t.statut IN (:notCompletedStatus)")
     long countLateTasks(@Param("user") User user,
                         @Param("date") LocalDate date,
-                        @Param("status") List<Task.Statut> status);
+                        @Param("notCompletedStatus") List<Task.Statut> notCompletedStatus);
 }

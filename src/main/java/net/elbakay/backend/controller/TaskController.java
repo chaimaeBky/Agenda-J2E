@@ -31,19 +31,24 @@ public class TaskController {
 
     private Long getUserIdFromSession(HttpSession session) {
         Long userId = (Long) session.getAttribute("userId");
+
         if (userId == null) {
-            // Essayez de récupérer depuis Security Context
+            // Vérifie aussi dans SecurityContext
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            if (auth != null && auth.isAuthenticated() && !(auth instanceof AnonymousAuthenticationToken)) {
+            if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getName())) {
                 String email = auth.getName();
                 User user = userService.findByEmail(email);
                 if (user != null) {
-                    session.setAttribute("userId", user.getId());
-                    return user.getId();
+                    userId = user.getId();
+                    session.setAttribute("userId", userId);
                 }
             }
-            throw new RuntimeException("Non authentifié");
+
+            if (userId == null) {
+                throw new RuntimeException("Non authentifié");
+            }
         }
+
         return userId;
     }
 
@@ -88,14 +93,38 @@ public class TaskController {
                                         HttpSession session) {
         try {
             Long userId = getUserIdFromSession(session);
-            TaskDTO updatedTask = taskService.updateTask(id, taskDTO, userId);
+
+            // 1. Récupérez la tâche existante
+            TaskDTO existingTask = taskService.getTaskById(id, userId);
+
+            // 2. Fusionnez les modifications (seulement les champs non-nuls)
+            if (taskDTO.getTitre() != null) {
+                existingTask.setTitre(taskDTO.getTitre());
+            }
+            if (taskDTO.getDescription() != null) {
+                existingTask.setDescription(taskDTO.getDescription());
+            }
+            if (taskDTO.getDate() != null) {
+                existingTask.setDate(taskDTO.getDate());
+            }
+            if (taskDTO.getHeure() != null) {
+                existingTask.setHeure(taskDTO.getHeure());
+            }
+            if (taskDTO.getPriorite() != null) {
+                existingTask.setPriorite(taskDTO.getPriorite());
+            }
+            if (taskDTO.getStatut() != null) {
+                existingTask.setStatut(taskDTO.getStatut());
+            }
+
+            // 3. Mettez à jour
+            TaskDTO updatedTask = taskService.updateTask(id, existingTask, userId);
             return ResponseEntity.ok(updatedTask);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("error", e.getMessage()));
         }
     }
-
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteTask(@PathVariable Long id, HttpSession session) {
         try {
