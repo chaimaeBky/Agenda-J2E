@@ -21,17 +21,24 @@ import org.springframework.web.bind.annotation.*;
 import java.util.*;
 
 @RestController
-@RequestMapping("/auth")
-@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+@RequestMapping("/auth")  // ← AJOUTE /api ICI !
+// @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
 public class AuthController {
 
     @Autowired
     private UserService userService;
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest registerRequest) {
+    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest registerRequest,
+                                      HttpSession session) {  // ← AJOUTE HttpSession
         try {
             User user = userService.registerUser(registerRequest);
+
+            // CRITIQUE : Créer une session immédiatement après l'inscription
+            session.setAttribute("userId", user.getId());
+            session.setAttribute("userEmail", user.getEmail());
+            session.setAttribute("userName", user.getNom());
+
             Map<String, Object> response = new HashMap<>();
             response.put("message", "Inscription réussie");
             response.put("user", Map.of(
@@ -95,17 +102,8 @@ public class AuthController {
     public ResponseEntity<?> getCurrentUser(HttpSession session) {
         Long userId = (Long) session.getAttribute("userId");
         if (userId == null) {
-            // Essayez aussi via SecurityContext
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getName())) {
-                String email = auth.getName();
-                User user = userService.findByEmail(email);
-                userId = user.getId();
-                session.setAttribute("userId", userId);
-            } else {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Non authentifié"));
-            }
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Non authentifié"));
         }
 
         try {
@@ -123,8 +121,7 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<?> logout(HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
+    public ResponseEntity<?> logout(HttpServletRequest request, HttpSession session) {
         if (session != null) {
             session.invalidate();
         }
