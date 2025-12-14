@@ -51,7 +51,7 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- JWT
+        <!-- JWT -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
@@ -69,7 +69,6 @@
             <version>0.12.3</version>
             <scope>runtime</scope>
         </dependency>
-        -->
         <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
